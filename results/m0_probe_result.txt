@@ -1,0 +1,5 @@
+M0 determinism/timing probe (2026-07-01)
+model=qwen2.5-coder:1.5b opts: seed=0 temp=0 num_ctx=2048 num_thread=4 top_k=1 top_p=1 num_predict=256
+2runs byte-equal=True sha=a7d6c991ae5fc2eb
+gen cold=45.1s warm=2.5s | ruff=0.06s | semgrep=2.54s/file
+obs: trivial JSON-load task elicited NO try/except (no swallow) -> M1 tasks must force failure paths

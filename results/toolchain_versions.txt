@@ -1,0 +1,4 @@
+semgrep=1.168.0
+ruff=ruff 0.15.12
+node=v24.14.0
+python=Python 3.12.10

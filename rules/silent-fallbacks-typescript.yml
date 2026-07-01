@@ -1,0 +1,24 @@
+rules:
+  - id: ts-swallow-return-default
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: "catch swallows the error and returns a default value (silent fallback)."
+    pattern-either:
+      - pattern: "try { ... } catch ($E) { return null; }"
+      - pattern: "try { ... } catch ($E) { return undefined; }"
+      - pattern: "try { ... } catch ($E) { return []; }"
+      - pattern: "try { ... } catch ($E) { return {}; }"
+      - pattern: "try { ... } catch ($E) { return false; }"
+      - pattern: 'try { ... } catch ($E) { return ""; }'
+      - pattern: "try { ... } catch { return null; }"
+      - pattern: "try { ... } catch { return undefined; }"
+      - pattern: "try { ... } catch { return []; }"
+      - pattern: "try { ... } catch { return {}; }"
+
+  - id: ts-empty-catch
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: "Empty catch block - error swallowed (silent failure)."
+    pattern-either:
+      - pattern: "try { ... } catch ($E) {}"
+      - pattern: "try { ... } catch {}"

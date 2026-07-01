@@ -1,0 +1,32 @@
+rules:
+  - id: py-swallow-return-default
+    languages: [python]
+    severity: ERROR
+    message: "Exception caught and a default value returned without logging/re-raise (silent fallback)."
+    patterns:
+      - pattern: |
+          try:
+            ...
+          except $E:
+            return $R
+      - metavariable-pattern:
+          metavariable: $R
+          patterns:
+            - pattern-either:
+                - pattern: None
+                - pattern: "[]"
+                - pattern: "{}"
+                - pattern: "0"
+                - pattern: "False"
+                - pattern: '""'
+
+  - id: py-except-pass
+    languages: [python]
+    severity: ERROR
+    message: "Exception swallowed with pass (silent failure)."
+    patterns:
+      - pattern: |
+          try:
+            ...
+          except $E:
+            pass

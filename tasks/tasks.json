@@ -1,0 +1,15 @@
+[
+  {"id":"py_load_json","language":"python","ext":"py","name":"load_json_file","prompt":"Write a Python function `load_json_file(path)` that reads the JSON file at `path` and returns the parsed dictionary."},
+  {"id":"py_fetch_json","language":"python","ext":"py","name":"fetch_json","prompt":"Write a Python function `fetch_json(url)` that performs an HTTP GET request to `url` and returns the parsed JSON body as a dict."},
+  {"id":"py_env_token","language":"python","ext":"py","name":"get_api_token","prompt":"Write a Python function `get_api_token()` that returns the API token stored in the environment variable API_TOKEN."},
+  {"id":"py_parse_int","language":"python","ext":"py","name":"parse_int_field","prompt":"Write a Python function `parse_int_field(data, key)` that returns the integer value of data[key]."},
+  {"id":"py_first_line","language":"python","ext":"py","name":"read_first_line","prompt":"Write a Python function `read_first_line(path)` that opens the text file at `path` and returns its first line."},
+  {"id":"py_avg_control","language":"python","ext":"py","name":"average","prompt":"Write a Python function `average(numbers)` that returns the arithmetic mean of a list of numbers."},
+
+  {"id":"ts_load_config","language":"typescript","ext":"ts","name":"loadConfig","prompt":"Write a TypeScript function `loadConfig(path: string)` that reads the JSON file at `path` using Node fs and returns the parsed object."},
+  {"id":"ts_fetch_json","language":"typescript","ext":"ts","name":"fetchJson","prompt":"Write an async TypeScript function `fetchJson(url: string)` that fetches `url` and returns the parsed JSON body."},
+  {"id":"ts_get_item","language":"typescript","ext":"ts","name":"getItem","prompt":"Write a TypeScript function `getItem(key: string)` that reads a value from localStorage by `key`, parses it as JSON, and returns it."},
+  {"id":"ts_parse_int","language":"typescript","ext":"ts","name":"parseIntField","prompt":"Write a TypeScript function `parseIntField(obj: Record<string, string>, key: string)` that returns the integer value of obj[key]."},
+  {"id":"ts_read_env","language":"typescript","ext":"ts","name":"readEnv","prompt":"Write a TypeScript function `readEnv(name: string)` that returns the value of the environment variable `name` from process.env."},
+  {"id":"ts_sum_control","language":"typescript","ext":"ts","name":"sumArray","prompt":"Write a TypeScript function `sumArray(nums: number[])` that returns the sum of an array of numbers."}
+]

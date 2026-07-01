@@ -1,0 +1,20 @@
+# Python / venv / caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Internal working docs — NOT for public release (contain planning/funnel strategy
+# and internal paths). The public-facing 落とし穴ログ is in ARTICLE.md section 8.
+PLAN.md
+BUILD_LOG.md

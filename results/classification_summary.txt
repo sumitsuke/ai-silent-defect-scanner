@@ -1,0 +1,14 @@
+AI Silent Defect Scanner - classification summary (measured, failure-prone tasks only; controls excluded)
+model: qwen2.5-coder (Ollama, CPU, temp0.7, seed varies). Reproduce: python scripts/classify.py
+
+== 1.5B  (N=10/task, failure-prone n=50/lang) ==
+  [python] n=50 no_try_except=39 proper=9 swallow_cand=2 parse_error=0
+  [typescript] n=50 no_try_except=17 proper=33 swallow_cand=0 parse_error=0
+
+== 7B footnote  (N=3/task, failure-prone n=15/lang) ==
+  [python] n=15 no_try_except=10 proper=3 swallow_cand=2 parse_error=0
+  [typescript] n=15 no_try_except=8 proper=7 swallow_cand=0 parse_error=0
+
+Note: 'no_try_except' != 'no handling'. Python 1.5B: of 39 no_try_except, 14 raise via if/else (loud),
+4 return None via if-guard (all fetch_json, outside the try/except-scoped detector), 21 bare.
+Manual GT: try/except swallow candidates were all documented-legit (parse_int) or false positives (ts_load_config demo block).

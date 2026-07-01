@@ -1,0 +1,4 @@
+# Normalize to LF in the repo and on checkout, so the frozen corpus (raw/, raw7b/)
+# stays byte-identical across platforms — the "same 120 files -> same table" claim.
+* text=auto eol=lf
+*.png binary
