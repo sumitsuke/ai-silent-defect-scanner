@@ -28,14 +28,28 @@ def analyze_py(s):
         return dict(handling="no_try_except", subtype=sub, returns_default="Y" if ret_def else "N",
                     has_log="Y" if has_log else "N", has_raise="Y" if has_raise else "N", intent=intent)
     handling = "proper"
+    handler_def = False
     for x in tries:
         for h in x.handlers:
             hl = LOGY.search("\n".join(unp(z) for z in h.body))
             hr = any(isinstance(n, ast.Raise) for n in ast.walk(h))
             op = len(h.body) == 1 and isinstance(h.body[0], ast.Pass)
             rd = any(isinstance(n, ast.Return) and n.value is not None and unp(n.value) in DC for n in h.body)
+            if rd: handler_def = True
             if op or (rd and not hr and not hl): handling = "swallow_cand"
-    return dict(handling=handling, subtype="", returns_default="Y" if ret_def else "N",
+    # 2026-09-17: handler があっても subtype を空にしない（読者の指摘＝空だと guard 集合を gt.csv から数えられない）。
+    #   guard_default   = default return が except handler の外にある（handler の中には無い）
+    #   handler_default = default return が handler の中だけ
+    #   both            = 両方にある
+    #   guard の定義は「except handler の外で default を return する」＝Return ノードのうち、どの handler 本体にも属さないもの
+    in_handler = set()
+    for x in tries:
+        for h in x.handlers:
+            for n in ast.walk(h): in_handler.add(id(n))
+    guard_def = any(isinstance(n, ast.Return) and n.value is not None and unp(n.value) in DC and id(n) not in in_handler
+                    for n in ast.walk(t))
+    sub = "both" if (guard_def and handler_def) else ("guard_default" if guard_def else ("handler_default" if handler_def else ""))
+    return dict(handling=handling, subtype=sub, returns_default="Y" if ret_def else "N",
                 has_log="Y" if has_log else "N", has_raise="Y" if has_raise else "N", intent=intent)
 
 CATCH = re.compile(r"catch\s*(\([^)]*\))?\s*\{([^{}]*)\}", re.S)
