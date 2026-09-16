@@ -43,6 +43,7 @@ AIにコードを書かせて、「失敗を黙って握り潰す（エラーが
 | うち偽陽性 | 2（TS：関数外の“使用例”の空 catch） |
 | うち文書化された正当フォールバック | 2（Python：docstring で契約明記） |
 | **try/except 内の“意図非開示の握り潰し”** | **0** |
+| **人手裁定で「握り潰し（欠陥）」とした 4 本（Python・`if` ガード型＝§9 の (B)）のうち、この検出器が届いた数** | **0（再現率 0/4・2026-09-17 追記）** |
 | （注）検出器のスコープ外＝ `if` ガード型の default 返し | 別途存在（§6・§9） |
 
 ---
@@ -118,7 +119,7 @@ rules:
             pass
 ```
 
-（上は[リポジトリの実ルール](https://github.com/axiom-pro/ai-silent-defect-scanner/blob/master/rules/silent-fallbacks-python.yml)をそのまま掲載。TypeScript 版も同型で `catch { return null }`・空 catch 等を対象に同梱しています。§7 の TS 検出はこのルールの結果です。）
+（上は[リポジトリの実ルール](https://github.com/sumitsuke/ai-silent-defect-scanner/blob/master/rules/silent-fallbacks-python.yml)をそのまま掲載。TypeScript 版も同型で `catch { return null }`・空 catch 等を対象に同梱しています。§7 の TS 検出はこのルールの結果です。）
 
 この時点の私の仮説は「このルールで数えれば握り潰しの混入率が出る」。**ここから実測が始まり、仮説が崩れます。**
 
@@ -132,6 +133,8 @@ rules:
 - **決定性の実測（M0）**：temperature 0・スレッド数固定なら**同一 seed 2回で byte 完全一致**（sha 一致を実測）。分布を出すには temp>0 が要ると確認の上で temp0.7 を採用。
 
 ## 6. 実測①：多くは「握り潰し」ではなく“素通り”か“loud な失敗”だった
+
+![失敗時の挙動（失敗経路 n=50/言語・Qwen2.5-Coder 1.5B）](https://raw.githubusercontent.com/sumitsuke/ai-silent-defect-scanner/master/results/figures/fig1_handling_by_language.png)
 
 失敗経路タスク（各言語 n=50）の try/except の使い方：
 
@@ -219,7 +222,7 @@ def fetch_json(url):
     if response.status_code == 200:
         return response.json()
     else:
-        return None            # 404 も 500 もネットワーク断も、区別なく None に潰れる
+        return None            # 404 も 500 も、非200は区別なく None に潰れる（ネットワーク断は例外で落ちる＝さらに別の挙動）
 ```
 
 どちらも「失敗したら `return None`」で、**返す部分の構文はほぼ同型**です。しかし (A) は関数の役割（変換の可否を返す）に照らして妥当な契約、(B) は**呼び出し側が「データが空」なのか「取得に失敗した」のかを永久に区別できない**——同じ `return None` でも意味がまるで違う。しかも **(B) にはコメントがある**。つまり **“文書化されているか”では決まらない**（文書化された `return 0`／`return None` が、下流の計算や分岐を静かに汚すことはいくらでもある）。
@@ -251,7 +254,7 @@ def get_api_token():
 ## 11. 再現手順（clone&run）＋ CI への組み込み
 
 ```bash
-git clone https://github.com/axiom-pro/ai-silent-defect-scanner && cd ai-silent-defect-scanner
+git clone https://github.com/sumitsuke/ai-silent-defect-scanner && cd ai-silent-defect-scanner
 # 機械的に再現できる部分：同じ120本に分類器・ルールを当てる → §6の分布・§7の候補数
 PYTHONUTF8=1 python scripts/classify_split.py      # 失敗経路の分布（§6の表・n=50/言語）
 PYTHONUTF8=1 python scripts/scan_and_count.py      # naive Semgrep の候補（§7 before）
@@ -283,15 +286,24 @@ make scan-mine DIR=/path/to/your/repo              # 自分のリポの分布・
 
 *計測コード・全150生成・人手GT（gt.csv）はリポジトリに同梱。落とし穴ログは本文§8。数値はすべて実測値で、未測定のものは「測っていない」と明記しています。*
 
-リポジトリ：https://github.com/axiom-pro/ai-silent-defect-scanner
+リポジトリ：https://github.com/sumitsuke/ai-silent-defect-scanner
 
 ---
 
-### 筆者について（COI 開示つき）
+### 検証の記録と現物は Sumitsuke Lab に
 
-**tauridev**（ソフトウェア開発／AIコード監査）。Rust/Tauri＋React/TypeScript でローカルファーストの Windows アプリを開発しつつ、「AI に本番品質を出させ、AI の誤りに気づく検証規律」を専門にしています。
+この記事の検証環境・判定・最終検証日・証拠（凍結ログ・生データ・再現コード）は、Sumitsuke Lab の本家記事にまとめています。
+
+- 🧪 本家（検証の記録つき） → https://sumitsuke.jp/lab/ai-code-silent-fallback/
+- 🧑‍💻 コード・データ・再現手順 → https://github.com/sumitsuke/ai-silent-defect-scanner
+
+生成 AI に書かせたコードや外注コードの「一応動くけど、このまま出していいか不安」は、この記事と同じ規律（ログ・テスト・静的解析・人の仕様確認を分けて点検）で受けています。テキスト完結・通話なし → https://sumitsuke.jp/works/repair/
 
 なお筆者は AIコード監査サービスを提供しており、本記事の結論（最後は人が意図を読む必要がある）は**筆者の事業上の立場にも有利になり得ます**。COI として明記した上で、**生成物・分類器・人手GT・偽陽性・検出器の穴まで公開**し、読者が検証できる形にしています。本記事の §7 でやった作業——検出器が挙げた候補を1本ずつ開き、docstring と呼び出し文脈から「正当なフォールバックか、隠れたバグか」を判定する——が、まさに機械には代われず人手で行う監査そのものです。
 
-- 🔍 AIで作ったアプリの不具合を監査・修正 → [ココナラ](https://coconala.com/services/4282365)
-- プロフィール：[coconala.com/users/6153961](https://coconala.com/users/6153961) ／ 公式：[getaxiom.dev](https://getaxiom.dev)
+
+
+---
+**訂正（2026-07-14）**: §9のコード例 (B) のコメントで「ネットワーク断も None に潰れる」と書いていましたが、誤りです。`requests.get` はネットワーク断では例外を送出するため None にはなりません（非200のみ None に潰れます）。呼び出し側が知るべき挙動が「None」と「例外」の2種類あるという意味で、(B) の危うさの論旨は変わりません。
+**訂正（2026-09-17）**: §7 の表は「候補 4 → 真陽性 0」（検出器が挙げたものの中の真陽性＝精度）だけを載せ、**人手で「握り潰し（欠陥）」と裁定した 4 本（`py_fetch_json_s2/s3/s7/s9`・すべて `if` ガード型）に検出器が 1 本も届いていない**（再現率 0/4）を数字として書いていませんでした。英語版（dev.to）の読者が公開リポの `results/gt.csv` から再導出して指摘し、当方が数え直して確認しました。精度の分母 4 は TypeScript 2（偽陽性）＋Python 2（正当）の言語混在、再現率の分母 4 は Python のみです（TypeScript に「欠陥」と裁定した行は 0 なので、TS の再現率は 0/0＝未定義）。同氏の提案で `gt.csv` に「default を返す位置」の列（`subtype` = `guard_default` / `handler_default` / `both`）を Python・TypeScript の両方に足しました（リポの README に定義あり）。TypeScript 側の `if` ガード型 11 本は**まだ人手裁定していません**。経緯と数字の全部は英語版の Corrections 節とコメント欄にあります: https://dev.to/tauridev/does-ai-generated-code-silently-swallow-errors-120-measured-generations-every-flagged-case-was-a-241p
+
