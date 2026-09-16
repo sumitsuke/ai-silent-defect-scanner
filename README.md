@@ -51,6 +51,21 @@ raw/ raw7b/        生成コーパス（固定同梱・raw7bは frozen。footnot
 results/           gt.csv（人手裁定）・classification_summary.txt・footnote_7b.csv・figures/・版情報
 ```
 
+### `gt.csv` の `subtype` 列（Python のみ・2026-09-17 追加）
+
+`try` がある行でも空にせず、default を返す位置で分けた（読者 howcani の指摘に基づく）。
+
+| 値 | 意味 |
+|---|---|
+| `guard_default` | default return が **except handler の外**にある（handler の中には無い） |
+| `handler_default` | default return が **handler の中だけ** |
+| `both` | 両方にある |
+| `bare` / `raise` | try が無い行の既存の分類 |
+| 空 | try はあるが default return が無い（raise 系） |
+
+「handler の外で default を返す」集合＝`guard_default ∪ both` は Python で 17 行（problematic_fallback 4・legit_fallback 2・proper 11）。
+TypeScript は `subtype` を付けていない（TS の失敗経路に problematic_fallback は 0 件で、recall は 0/0＝未定義）。
+
 ## 数値（失敗経路 n=50/言語・qwen2.5-coder:1.5b）
 
 | | try/except+proper | try/except default返し(候補) | try/except 不使用 |
