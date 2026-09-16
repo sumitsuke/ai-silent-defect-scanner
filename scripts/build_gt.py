@@ -6,6 +6,10 @@ for the candidates and boundary cases the author actually opened and adjudicated
 This is the transparency layer behind the article's 'candidate=machine / adjudication=human'.
 Reproduce: PYTHONUTF8=1 python scripts/build_gt.py"""
 import ast, glob, os, re, csv
+# TypeScript shape columns (added 2026-09-17) need tree-sitter; fail loudly rather than write blanks.
+from tree_sitter import Language, Parser
+import tree_sitter_typescript as _tst
+TS_PARSER = Parser(Language(_tst.language_typescript()))
 LOGY = re.compile(r"\b(log|logger|logging|print|warn|warning|error|critical|exception)\b", re.I)
 DC = {"None", "[]", "{}", "0", "False", "0.0", '""', "''"}
 
@@ -53,17 +57,66 @@ def analyze_py(s):
                 has_log="Y" if has_log else "N", has_raise="Y" if has_raise else "N", intent=intent)
 
 CATCH = re.compile(r"catch\s*(\([^)]*\))?\s*\{([^{}]*)\}", re.S)
-def analyze_ts(s):
-    has_log = bool(LOGY.search(s)); has_throw = "throw" in s
-    if "catch" not in s:
-        return dict(handling="no_try_except", subtype="", returns_default="", has_log="Y" if has_log else "N", has_raise="", intent="")
+TS_DEFAULTS = {"null", "undefined", "[]", "{}", "false", "0", "''", '""', "``"}
+
+def _ts_walk(n):
+    yield n
+    for c in n.children: yield from _ts_walk(c)
+
+def _ts_default_return(n, src):
+    """return_statement whose value is a default (null/undefined/[]/{}/false/0/''). Bare `return;` is not."""
+    exprs = [c for c in n.children if c.type not in ("return", ";")]
+    if not exprs: return False
+    e = exprs[0]
+    if src[e.start_byte:e.end_byte].decode("utf-8").strip() in TS_DEFAULTS: return True
+    if e.type == "array" and not [c for c in e.children if c.type not in ("[", "]")]: return True
+    if e.type == "object" and not [c for c in e.children if c.type not in ("{", "}")]: return True
+    return False
+
+def ts_shape(s):
+    """2026-09-17: shape columns for TypeScript via tree-sitter (same definitions as the Python side).
+    subtype: no catch -> raise / guard_default / bare; with catch -> guard_default / handler_default / both / ''.
+    Also returns the AST's own handling verdict so build time can print where it disagrees with the regex."""
+    src = s.encode("utf-8")
+    root = TS_PARSER.parse(src).root_node
+    catches = [n for n in _ts_walk(root) if n.type == "catch_clause"]
+    throws = any(n.type == "throw_statement" for n in _ts_walk(root))
+    in_catch = {n.id for c in catches for n in _ts_walk(c)}
+    rets = [n for n in _ts_walk(root) if n.type == "return_statement" and _ts_default_return(n, src)]
+    guard_def = any(n.id not in in_catch for n in rets)
+    handler_def = any(n.id in in_catch for n in rets)
+    if not catches:
+        sub = "raise" if throws else ("guard_default" if rets else "bare")
+        return dict(subtype=sub, returns_default="Y" if rets else "N", has_raise="Y" if throws else "N",
+                    handling_ast="no_try_except", parse_error=root.has_error)
     handling = "proper"
-    for m in CATCH.finditer(s):
-        b = m.group(2).strip()
-        if b == "" or (re.search(r"return\s+(null|undefined|\[\]|\{\}|false|''|\"\")\s*;?", b) and "throw" not in b and not LOGY.search(b)):
-            handling = "swallow_cand"
-    return dict(handling=handling, subtype="", returns_default="", has_log="Y" if has_log else "N",
-                has_raise="Y" if has_throw else "N", intent="")
+    for c in catches:
+        body = next((x for x in c.children if x.type == "statement_block"), None)
+        stmts = [x for x in body.children if x.type not in ("{", "}", "comment")] if body else []
+        btxt = src[body.start_byte:body.end_byte].decode("utf-8") if body else ""
+        b_throw = any(n.type == "throw_statement" for n in _ts_walk(body)) if body else False
+        b_retdef = any(n.type == "return_statement" and _ts_default_return(n, src) for n in _ts_walk(body)) if body else False
+        if not stmts or (b_retdef and not b_throw and not LOGY.search(btxt)): handling = "swallow_cand"
+    sub = "both" if (guard_def and handler_def) else ("guard_default" if guard_def else ("handler_default" if handler_def else ""))
+    return dict(subtype=sub, returns_default="Y" if rets else "N", has_raise="Y" if throws else "N",
+                handling_ast=handling, parse_error=root.has_error)
+
+def analyze_ts(s):
+    # `handling` stays the regex verdict the article's numbers were computed with; shape columns come from the AST.
+    has_log = bool(LOGY.search(s))
+    shape = ts_shape(s)
+    assert not shape["parse_error"], "tree-sitter reported a parse error"
+    if "catch" not in s:
+        handling = "no_try_except"
+    else:
+        handling = "proper"
+        for m in CATCH.finditer(s):
+            b = m.group(2).strip()
+            if b == "" or (re.search(r"return\s+(null|undefined|\[\]|\{\}|false|''|\"\")\s*;?", b) and "throw" not in b and not LOGY.search(b)):
+                handling = "swallow_cand"
+    return dict(handling=handling, subtype=shape["subtype"], returns_default=shape["returns_default"],
+                has_log="Y" if has_log else "N", has_raise=shape["has_raise"], intent="",
+                handling_ast=shape["handling_ast"])
 
 # Human adjudications the author actually made (sample_id -> (verdict, intent_override, note))
 HUMAN = {
@@ -78,6 +131,7 @@ HUMAN = {
 }
 
 rows = []
+TS_DISAGREE = []  # (sample_id, regex handling, AST handling) — printed, not written; `handling` keeps the published regex verdict
 for f in sorted(glob.glob("raw/**/*.*", recursive=True)):
     f = f.replace("\\", "/")
     base = os.path.basename(f); sid = base.rsplit(".", 1)[0]
@@ -85,6 +139,8 @@ for f in sorted(glob.glob("raw/**/*.*", recursive=True)):
     lang = "python" if f.endswith(".py") else "typescript"
     s = open(f, encoding="utf-8").read()
     a = (analyze_py if lang == "python" else analyze_ts)(s)
+    if lang == "typescript" and a["handling_ast"] != a["handling"]:
+        TS_DISAGREE.append((sid, a["handling"], a["handling_ast"]))
     verdict, note = "not_adjudicated", ""
     if sid in HUMAN:
         verdict, intent_override, note = HUMAN[sid]
@@ -108,6 +164,11 @@ with open("results/gt.csv", "w", newline="", encoding="utf-8") as fh:
 from collections import Counter
 print(f"wrote results/gt.csv ({len(rows)} rows)")
 print("human_verdict distribution:", dict(Counter(r["human_verdict"] for r in rows)))
+print("TS rows where the tree-sitter handling differs from the regex handling kept in `handling`:", TS_DISAGREE or "none")
+print("TS guard set (subtype in guard_default/both):",
+      sum(1 for r in rows if r["language"] == "typescript" and r["subtype"] in ("guard_default", "both")),
+      "rows; adjudicated problematic:",
+      sum(1 for r in rows if r["language"] == "typescript" and r["subtype"] in ("guard_default", "both") and r["human_verdict"] == "problematic_fallback"))
 print("adjudicated (non-trivial) rows:")
 for r in rows:
     if r["human_verdict"] in ("legit_fallback", "problematic_fallback", "false_positive"):

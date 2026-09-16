@@ -51,9 +51,9 @@ raw/ raw7b/        生成コーパス（固定同梱・raw7bは frozen。footnot
 results/           gt.csv（人手裁定）・classification_summary.txt・footnote_7b.csv・figures/・版情報
 ```
 
-### `gt.csv` の `subtype` 列（Python のみ・2026-09-17 追加）
+### `gt.csv` の `subtype` 列（2026-09-17 追加）
 
-`try` がある行でも空にせず、default を返す位置で分けた（読者 読者 の指摘に基づく）。
+`try` がある行でも空にせず、default を返す位置で分けた（読者 読者 の指摘に基づく）。Python は `ast`、TypeScript は tree-sitter（`pip install tree-sitter tree-sitter-typescript`）で、同じ定義。
 
 | 値 | 意味 |
 |---|---|
@@ -61,10 +61,13 @@ results/           gt.csv（人手裁定）・classification_summary.txt・footn
 | `handler_default` | default return が **handler の中だけ** |
 | `both` | 両方にある |
 | `bare` / `raise` | try が無い行の既存の分類 |
-| 空 | try はあるが default return が無い（raise 系） |
+| 空 | try/catch はあるが default return が無い（raise / throw 系） |
 
-「handler の外で default を返す」集合＝`guard_default ∪ both` は Python で 17 行（problematic_fallback 4・legit_fallback 2・proper 11）。
-TypeScript は `subtype` を付けていない（TS の失敗経路に problematic_fallback は 0 件で、recall は 0/0＝未定義）。
+「handler の外で default を返す」集合＝`guard_default ∪ both` は Python で 17 行（problematic_fallback 4・legit_fallback 2・proper 2・対照 9）、TypeScript で 11 行（`ts_get_item_s1-s9`・`ts_parse_int_s0/s5`）。
+
+**TypeScript の注意**: `handling` 列は記事の数字を出した regex 分類のまま。tree-sitter の分類はそれと 58/60 で一致し、残り 2 行（`ts_load_config_s0/s2`＝末尾のデモ用ブロックのコメントだけの catch）は AST 側が `swallow_cand` と言う。これは naive Semgrep が拾って人が `false_positive` と裁定した 2 行そのもの。
+TS の guard 集合 11 行は**人手裁定をしていない**（`ts_get_item_*` の `proper` は「catch が log か throw をする」という機械の判定であって、外側の default return を人が見た結果ではない）。TS の failure path に `problematic_fallback` が 0 件なのは「無い」ではなく「まだ開いていない」で、TS の recall は依然 0/0＝未定義。
+列を足したことで `has_raise` が TS の全行に入り、`throw` のみで catch が無い 4 行（`ts_parse_int_s4/s6/s7/s9`）は Python 側と同じ機械規則で `loud_fail` になった（それまでは `not_adjudicated` に含まれていた＝TS の内訳 31 proper / 27 not_adjudicated / 2 false_positive は 31 / 23 / 4 loud_fail / 2 に読み替え）。
 
 ## 数値（失敗経路 n=50/言語・qwen2.5-coder:1.5b）
 
