@@ -1,9 +1,21 @@
 """M2 spike aggregation: run self-made Semgrep rules over raw/, compute swallow
 containment rate = (files with >=1 hit)/(files). Per language & per task. Prints examples.
 NOTE: spike-level (false-positive tuning is M3). Numbers are measured, not fabricated."""
-import json, os, subprocess, collections, glob
+import json, os, sys, shutil, subprocess, collections, glob
 
-SEM = os.path.join(".venv", "Scripts", "semgrep.exe")
+
+def find_semgrep():
+    """semgrep の実体を探す。Windows の .venv 固定パスだけを見ていたので Linux/macOS で止まっていた。"""
+    for c in (os.path.join(".venv", "Scripts", "semgrep.exe"),   # Windows の venv
+              os.path.join(".venv", "bin", "semgrep"),           # POSIX の venv
+              shutil.which("semgrep")):                          # PATH
+        if c and (os.path.isfile(c) or shutil.which(c)):
+            return c
+    sys.exit("semgrep が見つかりません。`pip install -r requirements.lock.txt` のあと、"
+             "venv を有効にするか semgrep を PATH に入れてください。")
+
+
+SEM = find_semgrep()
 CONFIGS = ["rules/silent-fallbacks-python.yml", "rules/silent-fallbacks-typescript.yml"]
 
 files = [f.replace("\\", "/") for f in glob.glob("raw/**/*.*", recursive=True)]
@@ -12,7 +24,13 @@ valid = [f for f in files if f not in gen_err]
 
 cmd = [SEM, "scan"] + sum([["--config", c] for c in CONFIGS], []) + ["raw", "--json", "--quiet"]
 res = subprocess.run(cmd, capture_output=True, text=True)
-data = json.loads(res.stdout)
+if res.returncode not in (0, 1):      # semgrep は所見ありで 1 を返す。それ以外は失敗
+    sys.exit(f"semgrep が失敗しました (exit {res.returncode})\n{res.stderr[:800]}")
+try:
+    data = json.loads(res.stdout)
+except json.JSONDecodeError:
+    sys.exit(f"semgrep の出力が JSON ではありません (exit {res.returncode})\n"
+             f"stdout: {res.stdout[:300]}\nstderr: {res.stderr[:500]}")
 hits_by_file = collections.defaultdict(list)
 for r in data.get("results", []):
     hits_by_file[r["path"].replace("\\", "/")].append((r["check_id"].split(".")[-1], r["start"]["line"]))
