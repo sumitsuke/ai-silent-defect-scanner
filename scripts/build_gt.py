@@ -122,6 +122,10 @@ def analyze_ts(s):
 HUMAN = {
     "py_parse_int_s3": ("legit_fallback", "docstring", "docstring documents 'None if key missing or not convertible' = intended contract"),
     "py_parse_int_s9": ("legit_fallback", "comment", "comment 'Return None if conversion fails' documents intent"),
+    # 2026-09-18: the two open TypeScript guard rows, ruled after a reader's re-derivation (dev.to comment 3f6l4). Same rule as py_parse_int_s3/s9:
+    # the documented default is the contract. No catch in either file; the default return is the if-guard's else path.
+    "ts_parse_int_s0": ("legit_fallback", "docstring", "docstring 'If the conversion is not possible or the value is not a number, it returns null' = intended contract (ruled 2026-09-18; precedent py_parse_int_s3)"),
+    "ts_parse_int_s5": ("legit_fallback", "docstring", "docstring '@returns ... otherwise undefined' documents intent (ruled 2026-09-18; precedent py_parse_int_s9)"),
     "py_fetch_json_s2": ("problematic_fallback", "comment", "if-guard returns None on non-200 (comment says so) but erases 404/500/network/empty distinction; outside try/except detector scope"),
     "py_fetch_json_s3": ("problematic_fallback", "comment+log", "logs then returns None on failure; same failure-info-erasing fallback; detector scope-out"),
     "py_fetch_json_s7": ("problematic_fallback", "comment+log", "logs then returns None on failure; detector scope-out"),
