@@ -63,13 +63,13 @@ results/           gt.csv（人手裁定）・classification_summary.txt・footn
 | `bare` / `raise` | try が無い行の既存の分類 |
 | 空 | try/catch はあるが default return が無い（raise / throw 系） |
 
-「handler の外で default を返す」集合＝`guard_default ∪ both` は Python で 17 行（problematic_fallback 4・legit_fallback 2・proper 2・対照 9）、TypeScript で 11 行（`ts_get_item_s1-s9`・`ts_parse_int_s0/s5`）。
+「handler の外で default を返す」集合＝`guard_default ∪ both` は Python で 17 行（problematic_fallback 4・legit_fallback 2・proper 2・対照 9）、TypeScript で 11 行（`ts_get_item_s1-s9`＝proper 9・`ts_parse_int_s0/s5`＝legit_fallback 2・2026-09-18 裁定）。
 
 **TypeScript の注意**: `handling` 列は記事の数字を出した regex 分類のまま。tree-sitter の分類はそれと 58/60 で一致し、残り 2 行（`ts_load_config_s0/s2`＝末尾のデモ用ブロックのコメントだけの catch）は AST 側が `swallow_cand` と言う。これは naive Semgrep が拾って人が `false_positive` と裁定した 2 行そのもの。
-TS の guard 集合 11 行は**人手裁定をしていない**（`ts_get_item_*` の `proper` は「catch が log か throw をする」という機械の判定であって、外側の default return を人が見た結果ではない）。TS の failure path に `problematic_fallback` が 0 件なのは「無い」ではなく「まだ開いていない」で、TS の recall は依然 0/0＝未定義。
-**読者の再導出（2026-09-17・2 通目）で確定した 2 点**: ①記事の「候補 4 件」は 1 つの検出器の出力ではない＝Python の 2 件は `py-swallow-return-default`、TypeScript の 2 件は `ts-empty-catch`（`scripts/scan_and_count.py` の hits で確認）。厳格なアンカー（catch 本体が `return <default>` だけ）は、Python では log つきの 5 行、TypeScript では 9 行（全部 `console.error` → `return null/undefined` の 2 文・全部 proper）を除外する。②TypeScript 側は **対照群**として読む方が正確＝Python と共有する task は fetch_json・parse_int の 2 つだけで、Python の problematic 4 件が全部載る fetch_json は TS で 10/10 proper。TS の recall 0/0 は「未裁定」より「この task 標本の構成上、正例が空」が主因。guard 集合 11 行の未裁定 2 行（`ts_parse_int_s0/s5`）は著者の裁定待ち。
+TS の guard 集合 11 行のうち、`ts_get_item_*` 9 行の `proper` は「catch が log か throw をする」という機械の判定（外側の default return を人が見た結果ではない）。残る 2 行（`ts_parse_int_s0/s5`・catch なし・docstring が null／undefined を明記）は **2026-09-18 に人が `legit_fallback` と裁定**した（前例＝`py_parse_int_s3/s9`・同じ規則「文書化された default は契約」）。TS の failure path に `problematic_fallback` は 0 件＝**開いた 2 行はどちらも文書化された default**。recall は分母（正例）が 0 のままなので比としては未定義だが、「0/0＝何も見ていない」ではなく「0 of 2 opened, both documented」と読む。
+**読者の再導出（2026-09-17・2 通目）で確定した 2 点**: ①記事の「候補 4 件」は 1 つの検出器の出力ではない＝Python の 2 件は `py-swallow-return-default`、TypeScript の 2 件は `ts-empty-catch`（`scripts/scan_and_count.py` の hits で確認）。厳格なアンカー（catch 本体が `return <default>` だけ）は、Python では log つきの 5 行、TypeScript では 9 行（全部 `console.error` → `return null/undefined` の 2 文・全部 proper）を除外する。②TypeScript 側は **対照群**として読む方が正確＝Python と共有する task は fetch_json・parse_int の 2 つだけで、Python の problematic 4 件が全部載る fetch_json は TS で 10/10 proper。⚠ ここに当初「TS の recall 0/0 は『この task 標本の構成上、正例が空』が主因」と書いたが、**強すぎたので 2026-09-18 に撤回**（読者の 3 通目の指摘）: 正例が空かどうかは標本の構成でなく裁定の結果で、guard 集合の 2 行は開いていなかった。正しくは「guard フィルタは両言語で同じ 2 つの形に当たる。TS 側は proper 9・（09-18 裁定後）legit_fallback 2。catch 本体の規則は TS に正例の標的が無い（2 件のヒットはデモ用ブロックの catch）。TS の行の 0/0 は『2 行を開いて 2 行とも文書化されていた』と読む」。
 
-列を足したことで `has_raise` が TS の全行に入り、`throw` のみで catch が無い 4 行（`ts_parse_int_s4/s6/s7/s9`）は Python 側と同じ機械規則で `loud_fail` になった（それまでは `not_adjudicated` に含まれていた＝TS の内訳 31 proper / 27 not_adjudicated / 2 false_positive は 31 / 23 / 4 loud_fail / 2 に読み替え）。
+列を足したことで `has_raise` が TS の全行に入り、`throw` のみで catch が無い 4 行（`ts_parse_int_s4/s6/s7/s9`）は Python 側と同じ機械規則で `loud_fail` になった（それまでは `not_adjudicated` に含まれていた＝TS の内訳 31 proper / 27 not_adjudicated / 2 false_positive は 31 / 23 / 4 loud_fail / 2 に読み替え。2026-09-18 の裁定 2 件で 31 / 21 / 4 / 2 / legit_fallback 2）。
 
 ## 数値（失敗経路 n=50/言語・qwen2.5-coder:1.5b）
 
