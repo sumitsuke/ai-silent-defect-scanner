@@ -97,3 +97,7 @@ naive Semgrep の4候補は人手で全部が偽陽性（TS2）か文書化済�
 
 - 生成 AI のコードは「失敗を握り潰す」のか——120 本を静的解析で当て、候補 4 本を人手で裁定した記録 → https://sumitsuke.jp/lab/ai-code-silent-fallback/
 - 受託（生成 AI コード・外注コードの点検と修理・テキスト完結） → https://sumitsuke.jp/works/repair/
+
+## License
+
+Code: MIT (see `LICENSE`). Data, tables and figures: CC BY 4.0 (see `DATA_LICENSE`) — please credit **Sumitsuke Lab** (https://sumitsuke.jp/lab/).
