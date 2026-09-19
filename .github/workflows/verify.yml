@@ -18,7 +18,7 @@ jobs:
           ruff format --check .
       - name: reproduce from committed data and compare
         run: |
-          pip install -q -r requirements.lock.txt
+          pip install -q semgrep==1.168.0 tree-sitter==0.26.0 tree-sitter-typescript==0.23.2  # pinned as in requirements.lock.txt (the lock itself was frozen on Windows and lists pywin32)
           make reproduce
           make gt
           git diff --exit-code -- results
