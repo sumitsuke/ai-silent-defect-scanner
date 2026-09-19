@@ -17,7 +17,7 @@
 ## クイックスタート
 
 ```bash
-pip install -r requirements.lock.txt   # or: pip install semgrep ruff
+pip install -r requirements.lock.txt   # Windows で凍結（pywin32 を含む）。Linux/macOS は: pip install semgrep==1.168.0 tree-sitter==0.26.0 tree-sitter-typescript==0.23.2
 
 make reproduce         # 失敗時挙動の分布（記事§6）＋ naive Semgrep 候補（§7）
 make gt                # results/gt.csv を再生成（人手裁定層）
