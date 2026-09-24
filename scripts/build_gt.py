@@ -209,7 +209,7 @@ HUMAN = {
     "py_fetch_json_s2": (
         "problematic_fallback",
         "comment",
-        "if-guard returns None on non-200 (comment says so) but erases 404/500/network/empty distinction; outside try/except detector scope",
+        "if-guard returns None on any non-200 status (comment says so), erasing the 404/500/204 distinction; network errors are not swallowed (requests.get is outside any try and raises; corrected 2026-09-24); outside try/except detector scope",
     ),
     "py_fetch_json_s3": (
         "problematic_fallback",

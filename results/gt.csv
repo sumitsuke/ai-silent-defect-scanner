@@ -21,7 +21,7 @@ py_env_token_s8,py_env_token,python,8,no_try_except,raise,N,N,Y,,loud_fail,
 py_env_token_s9,py_env_token,python,9,no_try_except,raise,N,N,Y,,loud_fail,
 py_fetch_json_s0,py_fetch_json,python,0,no_try_except,raise,N,Y,Y,,loud_fail,
 py_fetch_json_s1,py_fetch_json,python,1,no_try_except,bare,N,Y,N,,not_adjudicated,
-py_fetch_json_s2,py_fetch_json,python,2,no_try_except,guard_default,Y,N,N,comment,problematic_fallback,if-guard returns None on non-200 (comment says so) but erases 404/500/network/empty distinction; outside try/except detector scope
+py_fetch_json_s2,py_fetch_json,python,2,no_try_except,guard_default,Y,N,N,comment,problematic_fallback,"if-guard returns None on any non-200 status (comment says so), erasing the 404/500/204 distinction; network errors are not swallowed (requests.get is outside any try and raises; corrected 2026-09-24); outside try/except detector scope"
 py_fetch_json_s3,py_fetch_json,python,3,no_try_except,guard_default,Y,Y,N,comment+log,problematic_fallback,logs then returns None on failure; same failure-info-erasing fallback; detector scope-out
 py_fetch_json_s4,py_fetch_json,python,4,no_try_except,raise,N,Y,Y,,loud_fail,
 py_fetch_json_s5,py_fetch_json,python,5,no_try_except,raise,N,Y,Y,,loud_fail,
