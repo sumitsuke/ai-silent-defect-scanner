@@ -53,7 +53,7 @@ results/           gt.csv（人手裁定）・classification_summary.txt・footn
 
 ### `gt.csv` の `subtype` 列（2026-09-17 追加）
 
-`try` がある行でも空にせず、default を返す位置で分けた（読者 読者 の指摘に基づく）。Python は `ast`、TypeScript は tree-sitter（`pip install tree-sitter tree-sitter-typescript`）で、同じ定義。
+`try` がある行でも空にせず、default を返す位置で分けた（読者の指摘に基づく）。Python は `ast`、TypeScript は tree-sitter（`pip install tree-sitter tree-sitter-typescript`）で、同じ定義。
 
 | 値 | 意味 |
 |---|---|
